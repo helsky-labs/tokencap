@@ -30,6 +30,7 @@ struct MenuBarView: View {
     @ObservedObject var service: UsageService
     @ObservedObject var settings: SettingsManager
     @ObservedObject var updateService: UpdateService
+    @ObservedObject var statsService: StatsService
     @State private var selectedTab: MenuTab = .usage
 
     var body: some View {
@@ -151,6 +152,12 @@ struct MenuBarView: View {
                     // Extra usage (bottom)
                     if let extra = usage.extraUsage, extra.isEnabled {
                         extraUsageCard(extra)
+                            .padding(.top, 4)
+                    }
+
+                    // Session stats from Claude Code
+                    if statsService.todayStats.totalMessages > 0 {
+                        statsSection
                             .padding(.top, 4)
                     }
                 }
@@ -326,6 +333,112 @@ struct MenuBarView: View {
             }
         }
         .padding(16)
+    }
+
+    // MARK: - Stats Section
+
+    private var statsSection: some View {
+        let stats = statsService.todayStats
+
+        return VStack(alignment: .leading, spacing: 8) {
+            sectionTitle("TODAY'S STATS")
+
+            VStack(spacing: 0) {
+                // Tokens row
+                statsRow(
+                    icon: "number",
+                    label: "Tokens",
+                    value: stats.formattedTokens,
+                    color: .brand
+                )
+
+                Divider().padding(.horizontal, 12)
+
+                // Input / Output breakdown
+                HStack(spacing: 0) {
+                    statsCompactCell(label: "Input", value: stats.formattedInputTokens)
+                    Divider().frame(height: 28)
+                    statsCompactCell(label: "Output", value: stats.formattedOutputTokens)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+
+                Divider().padding(.horizontal, 12)
+
+                // Cache breakdown
+                HStack(spacing: 0) {
+                    statsCompactCell(label: "Cache Read", value: stats.formattedCacheReadTokens)
+                    Divider().frame(height: 28)
+                    statsCompactCell(label: "Cache Write", value: stats.formattedCacheWriteTokens)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+
+                Divider().padding(.horizontal, 12)
+
+                // Messages row
+                statsRow(
+                    icon: "bubble.left.and.bubble.right",
+                    label: "Messages",
+                    value: "\(stats.totalMessages)",
+                    color: .secondary
+                )
+
+                Divider().padding(.horizontal, 12)
+
+                // Sessions row
+                statsRow(
+                    icon: "terminal",
+                    label: "Sessions",
+                    value: "\(stats.totalSessions)",
+                    color: .secondary
+                )
+
+                Divider().padding(.horizontal, 12)
+
+                // Cost row
+                statsRow(
+                    icon: "dollarsign.circle",
+                    label: "Est. Cost",
+                    value: stats.formattedCost,
+                    color: .statusGreen
+                )
+            }
+            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    private func statsRow(icon: String, label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundStyle(color)
+                .frame(width: 20)
+
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .monospacedDigit()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    private func statsCompactCell(label: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 12, weight: .semibold))
+                .monospacedDigit()
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Gauge Row
